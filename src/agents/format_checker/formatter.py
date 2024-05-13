@@ -1,4 +1,5 @@
 """Format Checker"""
+import configparser
 import os
 
 from dotenv import load_dotenv
@@ -7,13 +8,9 @@ from langchain.prompts import (
     ChatPromptTemplate,
     SystemMessagePromptTemplate,
 )
-from .config import (
-    TOGETHER_FORMATTER,
-    TOGETHER_FORMATTER_LLM,
-    FORMATTER_LLM
-)
+config = configparser.ConfigParser()
+config.read('config.ini')
 
-load_dotenv()
 system_prompt_initial = '''
 The previous task from the LLM failed. It can either lack the necessary information or the information is not in the correct format. Please provide the information in the correct format. 
 You may eliminate the information that is not necessary.
@@ -76,16 +73,18 @@ prompt = ChatPromptTemplate.from_messages(
 )
 
 # Choose the LLM that will drive the agent
-if TOGETHER_FORMATTER:
+if config['FORMAT_CHECKER']['format_checker_together']:
     from src.utils.togetherchain import TogetherLLM
     llm = TogetherLLM(
-        model=TOGETHER_FORMATTER_LLM,
+        model=config['FORMAT_CHECKER']['format_checker_together_llm'],
+        together_api_key=str(os.environ.get("TOGETHER_API_KEY")),
         temperature=0.0,
-        max_tokens=10000,
+        max_tokens=int(config['FORMAT_CHECKER']['format_checker_tokens']),
     )
 else:
     llm = ChatOpenAI(
-        model = FORMATTER_LLM,
+        model = config['FORMAT_CHECKER']['format_checker_llm'],
         temperature=0.0,
     )
+
 formatter_runnable = prompt | llm

@@ -3,7 +3,9 @@ This module contains the logic for the outline generator agent.
 It creates runnables for generating an outline for a Wikipedia page based on a given content.
 It also contains feedback logic for the agent to improve its performance.
 """
+import os
 from typing import List, Optional
+import configparser
 
 from langchain_openai.chat_models import ChatOpenAI
 from langchain.prompts import (
@@ -12,6 +14,11 @@ from langchain.prompts import (
 )
 from langchain.output_parsers import PydanticOutputParser
 from langchain_core.pydantic_v1 import BaseModel, Field
+
+
+config = configparser.ConfigParser()
+config.read('config.ini')
+
 
 SYSTEM_PROMPT = '''
 "You are a Wikipedia writer. Write an outline for a Wikipedia page for the given content. Be comprehensive and specific.",
@@ -96,10 +103,19 @@ prompt_with_feedback = ChatPromptTemplate.from_messages(
     ]
 ).partial(format_instructions=parser.get_format_instructions())
 # Choose the LLM that will drive the agent
-llm = ChatOpenAI(
-    model="gpt-4-turbo-2024-04-09",
-    temperature=0.0,
-)
+if config['OUTLINE_GENERATOR']['outline_generator_together']:
+    from src.utils.togetherchain import TogetherLLM
+    llm = TogetherLLM(
+        model=config['OUTLINE_GENERATOR']['outline_generator_together_llm'],
+        together_api_key=str(os.environ.get("TOGETHER_API_KEY")),
+        temperature=0.0,
+        max_tokens=int(config['OUTLINE_GENERATOR']['outline_generator_tokens']),
+    )
+else:
+    llm = ChatOpenAI(
+        model = config['OUTLINE_GENERATOR']['outline_generator_llm'],
+        temperature=0.0,
+    )
 
 outline_gen_runnable = prompt | llm | parser
 outline_gen_runnable_with_feedback = prompt_with_feedback | llm | parser

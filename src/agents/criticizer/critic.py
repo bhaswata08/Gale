@@ -1,4 +1,5 @@
-from typing import List
+import configparser
+import os
 
 from langchain_openai.chat_models import ChatOpenAI
 from langchain.prompts import (
@@ -7,6 +8,9 @@ from langchain.prompts import (
 )
 from langchain.output_parsers import PydanticOutputParser
 from langchain_core.pydantic_v1 import BaseModel, Field
+
+config = configparser.ConfigParser()
+config.read('config.ini')
 
 SYSTEM_PROMPT = '''
 Based on the information given, your task is to critique the given review and the corresponding sections.\
@@ -45,9 +49,18 @@ prompt = ChatPromptTemplate.from_messages(
 ).partial(format_instructions=parser.get_format_instructions())
 
 # Choose the LLM that will drive the agent
-llm = ChatOpenAI(
-    model="gpt-4-turbo-2024-04-09",
-    temperature=0.0,
-)
+if config['CRITIC']['critic_together']:
+    from src.utils.togetherchain import TogetherLLM
+    llm = TogetherLLM(
+        model=config['CRITIC']['critic_together_llm'],
+        together_api_key=str(os.environ.get("TOGETHER_API_KEY")),
+        temperature=0.0,
+        max_tokens=int(config['CRITIC']['critic_tokens']),
+    )
+else:
+    llm = ChatOpenAI(
+        model = config['CRITIC']['critic_llm'],
+        temperature=0.0,
+    )
 
 critique_runnable = prompt | llm | parser

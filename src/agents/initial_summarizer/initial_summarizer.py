@@ -1,4 +1,7 @@
 """Entry point for the initial summarizer agent."""
+import os
+import configparser
+
 from langchain_openai.chat_models import ChatOpenAI
 from langchain.prompts import (
     ChatPromptTemplate,
@@ -6,6 +9,9 @@ from langchain.prompts import (
 )
 
 from langchain.schema.output_parser import StrOutputParser
+
+config = configparser.ConfigParser()
+config.read('config.ini')
 
 SYSTEM_PROMPT = '''
 You are an expert reseacher that generates high quality summaries from Academic Papers or open-source projects. 
@@ -35,9 +41,17 @@ prompt = ChatPromptTemplate.from_messages(
 )
 
 # Choose the LLM that will drive the agent
-llm = ChatOpenAI(
-    model="claude-3-opus",
-    temperature=0.0,
-)
-
+if config['INITIAL_SUMMARIZER']['initial_summarizer_together']:
+    from src.utils.togetherchain import TogetherLLM
+    llm = TogetherLLM(
+        model=config['INITIAL_SUMMARIZER']['initial_summarizer_together_llm'],
+        together_api_key=str(os.environ.get("TOGETHER_API_KEY")),
+        temperature=0.0,
+        max_tokens=int(config['INITIAL_SUMMARIZER']['initial_summarizer_tokens']),
+    )
+else:
+    llm = ChatOpenAI(
+        model=config['INITIAL_SUMMARIZER']['initial_summarizer_llm'],
+        temperature=0.0
+        )
 initial_summarizer_runnable = prompt | llm | StrOutputParser()
