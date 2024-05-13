@@ -1,4 +1,4 @@
-import configparser
+import yaml
 import os
 
 from langchain_openai.chat_models import ChatOpenAI
@@ -9,8 +9,8 @@ from langchain.prompts import (
 from langchain.output_parsers import PydanticOutputParser
 from langchain_core.pydantic_v1 import BaseModel, Field
 
-config = configparser.ConfigParser()
-config.read('config.ini')
+with open("config.yaml", "r") as file:
+    config = yaml.safe_load(file)
 
 SYSTEM_PROMPT = '''
 Based on the information given, your task is to critique the given review and the corresponding sections.\
@@ -24,6 +24,8 @@ if the review is perfect, set isperfect field to true, else set it to false.\
 
 Here is the context you from which you may refer the ground truth from:\
 {context}
+Do not output criticism or feedback outside the context of the review.\
+if a technical detail is missing outside the context of the review, do not provide it.\
 
 Here is the content you need to critique:\
 {content}
@@ -49,17 +51,17 @@ prompt = ChatPromptTemplate.from_messages(
 ).partial(format_instructions=parser.get_format_instructions())
 
 # Choose the LLM that will drive the agent
-if config['CRITIC']['critic_together']:
+if config['critic_config']['together']:
     from src.utils.togetherchain import TogetherLLM
     llm = TogetherLLM(
-        model=config['CRITIC']['critic_together_llm'],
+        model=config['critic_config']['together_llm'],
         together_api_key=str(os.environ.get("TOGETHER_API_KEY")),
         temperature=0.0,
-        max_tokens=int(config['CRITIC']['critic_tokens']),
+        max_tokens=int(config['critic_config']['tokens']),
     )
 else:
     llm = ChatOpenAI(
-        model = config['CRITIC']['critic_llm'],
+        model = config['critic_config']['llm'],
         temperature=0.0,
     )
 

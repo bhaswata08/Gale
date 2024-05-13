@@ -1,0 +1,28 @@
+critic_config:
+  together: true
+  together_llm: mistralai/Mixtral-8x22B-Instruct-v0.1
+  llm: gpt-4-turbo-2024-04-09
+  tokens: 30000
+
+format_checker_config:
+  together: true
+  together_llm: mistralai/Mixtral-8x22B-Instruct-v0.1
+  llm: gpt-4-turbo-2024-04-09
+  tokens: 30000
+
+formatter_config:
+  together: true
+  together_llm: mistralai/Mixtral-8x22B-Instruct-v0.1
+  llm: gpt-4-turbo-2024-04-09
+
+initial_summarizer_config:
+  together: true
+  together_llm: mistralai/Mixtral-8x22B-Instruct-v0.1
+  llm: gpt-4-turbo-2024-04-09
+  tokens: 30000
+
+outline_generator_config:
+  together: true
+  together_llm: mistralai/Mixtral-8x22B-Instruct-v0.1
+  llm: gpt-4-turbo-2024-04-09
+  tokens: 30000

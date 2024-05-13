@@ -5,7 +5,7 @@ It also contains feedback logic for the agent to improve its performance.
 """
 import os
 from typing import List, Optional
-import configparser
+import yaml
 
 from langchain_openai.chat_models import ChatOpenAI
 from langchain.prompts import (
@@ -15,9 +15,8 @@ from langchain.prompts import (
 from langchain.output_parsers import PydanticOutputParser
 from langchain_core.pydantic_v1 import BaseModel, Field
 
-
-config = configparser.ConfigParser()
-config.read('config.ini')
+with open("config.yaml", "r") as file:
+    config = yaml.safe_load(file)
 
 
 SYSTEM_PROMPT = '''
@@ -80,6 +79,12 @@ parser = PydanticOutputParser(pydantic_object=Outline)
 prompt = ChatPromptTemplate.from_messages(
     [
       SystemMessagePromptTemplate.from_template(SYSTEM_PROMPT),
+      (
+            "user",
+            """Here is the content you need to create an outline for: \n\n
+            {content}
+            """
+      )
     ]
 ).partial(format_instructions=parser.get_format_instructions())
 
@@ -99,21 +104,27 @@ prompt_with_feedback = ChatPromptTemplate.from_messages(
             """Here is the contents of the document: \n\n
             {relevant_content}
             """
+        ),
+        (
+            "user",
+            """Here is the feedback you need to incorporate: \n\n
+            {feedback}
+            """
         )
     ]
 ).partial(format_instructions=parser.get_format_instructions())
 # Choose the LLM that will drive the agent
-if config['OUTLINE_GENERATOR']['outline_generator_together']:
+if config['outline_generator_config']['together']:
     from src.utils.togetherchain import TogetherLLM
     llm = TogetherLLM(
-        model=config['OUTLINE_GENERATOR']['outline_generator_together_llm'],
+        model=config['outline_generator_config']['together_llm'],
         together_api_key=str(os.environ.get("TOGETHER_API_KEY")),
         temperature=0.0,
-        max_tokens=int(config['OUTLINE_GENERATOR']['outline_generator_tokens']),
+        max_tokens=int(config['outline_generator_config']['tokens']),
     )
 else:
     llm = ChatOpenAI(
-        model = config['OUTLINE_GENERATOR']['outline_generator_llm'],
+        model = config['outline_generator_config']['llm'],
         temperature=0.0,
     )
 

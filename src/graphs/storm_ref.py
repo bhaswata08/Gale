@@ -5,6 +5,7 @@ import logging
 from typing import TypedDict, Any
 
 from dotenv import load_dotenv
+from pydantic.v1 import ValidationError
 from langchain_core.messages import (
     BaseMessage,
     HumanMessage,
@@ -29,6 +30,7 @@ from src.agents.outline_generator.outline_gen import (
     outline_gen_runnable_with_feedback, #TODO: Implement this
     parser as outline_parser
 )
+
 
 load_dotenv()
 logger = logging.getLogger(__name__)
@@ -74,10 +76,10 @@ def call_outline_generator(state : AgentState):
             }
             outputs = outline_gen_runnable.with_config(
                 {
-                    'run_name': 'outline_gen'
+                    'run_name': 'outline_gen_without_feedback'
                 }
             ).invoke(inputs)
-        except Exception as e:
+        except ValidationError as e:
             formatter_inputs = {
                 "format_instructions": outline_parser.get_format_instructions(),
                 "agent_output": e,
@@ -85,21 +87,22 @@ def call_outline_generator(state : AgentState):
             temp_runnable = formatter_runnable | outline_parser
             outputs = temp_runnable.with_config(
                 {
-                    "run_name": "outline_gen passed through formatter",
+                    "run_name": "outline_gen_without_feedback passed through formatter",
                 }
             ).invoke(formatter_inputs)
     else:
         try:
             inputs = {
-                "relevant_content": state["content"],
-                "agent_outline": repr(state["feedback"])
+                "relevant_content": state["initial_content"],
+                "agent_outline": state['content'],
+                "feedback" : repr(state['feedback'])
             }
             outputs = outline_gen_runnable_with_feedback.with_config(
                 {
-                    'run_name': 'outline_gen'
+                    'run_name': 'outline_gen_with_feedback'
                 }
             ).invoke(inputs)
-        except Exception as e:
+        except ValidationError as e:
             formatter_inputs = {
                 "format_instructions": outline_parser.get_format_instructions(),
                 "agent_output": e,
@@ -107,7 +110,7 @@ def call_outline_generator(state : AgentState):
             temp_runnable = formatter_runnable | outline_parser
             outputs = temp_runnable.with_config(
                 {
-                    "run_name": "outline_gen passed through formatter",
+                    "run_name": "outline_gen_with_feedback passed through formatter",
                 }
             ).invoke(formatter_inputs)
 
@@ -126,7 +129,7 @@ def call_criticizer(state : AgentState):
                 'run_name': 'criticizer'
             }
         ).invoke(inputs)
-    except Exception as e:
+    except ValidationError as e:
         formatter_inputs = {
             "format_instructions": critique_parser.get_format_instructions(),
             "agent_output": e,
@@ -139,7 +142,7 @@ def call_criticizer(state : AgentState):
         ).invoke(formatter_inputs)
 
     return {
-        'content': outputs,
+        'feedback': outputs,
         "iter_count" : state["iter_count"] + 1
     }
 
