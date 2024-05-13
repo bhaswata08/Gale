@@ -1,18 +1,21 @@
-import os
-import operator
-import random
+"""
+This is a simple example of a graph that uses the langgraph library 
+to create a state machine for the GALE agent. 
+
+The agent is a simple agent that takes in a piece of text and then runs it 
+through a series of agents to generate an outline. 
+
+The outline is then critiqued and the process is repeated until 
+the outline is perfect or the number of iterations exceeds a 
+certain limit. The agent is then done and the final outline is returned.
+"""
+import yaml
 import logging
 from typing import TypedDict, Any
+from json import JSONDecodeError
 
 from dotenv import load_dotenv
 from langchain_core.exceptions import OutputParserException
-from langchain_core.messages import (
-    BaseMessage,
-    HumanMessage,
-    AIMessage
-)
-from langchain_core.documents import Document
-from langchain.pydantic_v1 import BaseModel, Field
 from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.graph import StateGraph, END
 
@@ -27,7 +30,7 @@ from src.agents.initial_summarizer.initial_summarizer import(
 )
 from src.agents.outline_generator.outline_gen import (
     outline_gen_runnable,
-    outline_gen_runnable_with_feedback, #TODO: Implement this
+    outline_gen_runnable_with_feedback,
     parser as outline_parser
 )
 
@@ -35,13 +38,15 @@ from src.agents.outline_generator.outline_gen import (
 load_dotenv()
 logger = logging.getLogger(__name__)
 logging.basicConfig(filename="storm_v2.log", level=logging.INFO)
-memory = SqliteSaver.from_conn_string(":memory:")
+
+with open("config.yaml", "r") as file:
+    config = yaml.safe_load(file)
 
 class AgentState(TypedDict):
     initial_content : str
     content : Any
     feedback : Critique
-    iter_count : int # TODO: Need to implement this
+    iter_count : int
 
 
 # Nodes
@@ -49,7 +54,7 @@ def should_retry(state : AgentState)->str:
     is_perfect = state["feedback"].isperfect
     if (
         is_perfect == True
-        or state['iter_count'] > 4
+        or state['iter_count'] > config['graphs']['iter_count']
     ):
         return "continue"
     else:
@@ -79,7 +84,7 @@ def call_outline_generator(state : AgentState):
                     'run_name': 'outline_gen_without_feedback'
                 }
             ).invoke(inputs)
-        except OutputParserException as e:
+        except (OutputParserException, JSONDecodeError) as e:
             formatter_inputs = {
                 "format_instructions": outline_parser.get_format_instructions(),
                 "agent_output": e,
@@ -93,16 +98,16 @@ def call_outline_generator(state : AgentState):
     else:
         try:
             inputs = {
-                "relevant_content": state["initial_content"],
+                "relevant_content": state['feedback'].relevantcontent,
                 "agent_outline": state['content'],
-                "feedback" : repr(state['feedback'])
+                "feedback" : repr(state['feedback'].critique)
             }
             outputs = outline_gen_runnable_with_feedback.with_config(
                 {
                     'run_name': 'outline_gen_with_feedback'
                 }
             ).invoke(inputs)
-        except OutputParserException as e:
+        except (OutputParserException, JSONDecodeError) as e:
             formatter_inputs = {
                 "format_instructions": outline_parser.get_format_instructions(),
                 "agent_output": e,
@@ -113,6 +118,10 @@ def call_outline_generator(state : AgentState):
                     "run_name": "outline_gen_with_feedback passed through formatter",
                 }
             ).invoke(formatter_inputs)
+
+        except Exception as e:
+            print(type(Exception))
+            print(type(e))
 
     return {
         'content': outputs
@@ -129,7 +138,7 @@ def call_criticizer(state : AgentState):
                 'run_name': 'criticizer'
             }
         ).invoke(inputs)
-    except OutputParserException as e:
+    except (OutputParserException, JSONDecodeError) as e:
         formatter_inputs = {
             "format_instructions": critique_parser.get_format_instructions(),
             "agent_output": e,
@@ -140,6 +149,9 @@ def call_criticizer(state : AgentState):
                 "run_name": "criticizer passed through formatter",
             }
         ).invoke(formatter_inputs)
+    except Exception as e:
+        print(type(Exception))
+        print(type(e))
 
     return {
         'feedback': outputs,

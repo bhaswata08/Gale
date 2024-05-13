@@ -55,10 +55,14 @@ YOUR RESPONSE:
 This example is correct because it only contains the response and nothing else.
 
 The format for the information is as follows:
+-----------------------------------------
 {format_instructions}
+-----------------------------------------
 
 Here is the output from the LLM:
+-----------------------------------------
 {agent_output}
+-----------------------------------------
 
 Adjust your output accordingly.
 

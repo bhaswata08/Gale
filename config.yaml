@@ -26,3 +26,6 @@ outline_generator_config:
   together_llm: mistralai/Mixtral-8x22B-Instruct-v0.1
   llm: gpt-4-turbo-2024-04-09
   tokens: 30000
+
+graphs:
+  iter_count: 15

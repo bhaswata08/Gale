@@ -33,7 +33,7 @@ You have tried this task before, incorporate the given feedback to improve your 
 class Subsection(BaseModel):
     """A subsection of a Wikipedia page."""
     SubSectionTitle : str = Field(description="Title of the subsection")
-    description : str = Field(description="Content of the subsection")
+    description : str = Field(description="Detailed Content of the subsection")
 
     @property
     def as_string(self)->str:
@@ -43,7 +43,7 @@ class Subsection(BaseModel):
 class Section(BaseModel):
     """A section of a Wikipedia page."""
     SectionTitle : str = Field(description="Title of the section")
-    description : str = Field(description="A description of the section")
+    description : str = Field(description="A Detialed description of the section")
     subsections: Optional[List[Subsection]] = Field(
         default = None,
         title = "Titles and descriptions for each subsection of the wikipedia page",
@@ -82,7 +82,9 @@ prompt = ChatPromptTemplate.from_messages(
       (
             "user",
             """Here is the content you need to create an outline for: \n\n
+            -----------------------------------------
             {content}
+            -----------------------------------------
             """
       )
     ]
@@ -95,20 +97,26 @@ prompt_with_feedback = ChatPromptTemplate.from_messages(
         (
             "user",
             """Here is the output from your last trial: \n\n
+            -----------------------------------------
             {agent_outline}
+            -----------------------------------------
             """
         ),
         SystemMessagePromptTemplate.from_template(SYSTEM_PROMPT_WITH_FEEDBACK),
         (
             "user",
             """Here is the contents of the document: \n\n
+            -----------------------------------------
             {relevant_content}
+            -----------------------------------------
             """
         ),
         (
             "user",
             """Here is the feedback you need to incorporate: \n\n
+            -----------------------------------------
             {feedback}
+            -----------------------------------------
             """
         )
     ]

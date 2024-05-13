@@ -23,15 +23,20 @@ Give information on how it can improve its writing style and the content of the 
 if the review is perfect, set isperfect field to true, else set it to false.\
 
 Here is the context you from which you may refer the ground truth from:\
+-----------------------------------------\
 {context}
+-----------------------------------------\
 Do not output criticism or feedback outside the context of the review.\
 if a technical detail is missing outside the context of the review, do not provide it.\
 
 Here is the content you need to critique:\
+-----------------------------------------\
 {content}
-
+-----------------------------------------\
 Here is the format instructions for your output:\
+-----------------------------------------\
 {format_instructions}
+-----------------------------------------\
 
 do not output outside your format instructions.
 '''
@@ -40,6 +45,8 @@ class Critique(BaseModel):
     isperfect: bool = Field(..., title="Whether the review is perfect or not")
     critique: str = Field(..., title="The critique of the review")
     cotreasoning: str = Field(..., title="The reasoning behind the critique")
+    relevantcontent : str = Field(..., title="The relevant content the writer agent needs to refer\
+                                   from to improve the review, pass it from the ground truth")
 
 
 parser = PydanticOutputParser(pydantic_object=Critique)
