@@ -5,7 +5,7 @@ import logging
 from typing import TypedDict, Any
 
 from dotenv import load_dotenv
-from pydantic.v1 import ValidationError
+from langchain_core.exceptions import OutputParserException
 from langchain_core.messages import (
     BaseMessage,
     HumanMessage,
@@ -34,7 +34,7 @@ from src.agents.outline_generator.outline_gen import (
 
 load_dotenv()
 logger = logging.getLogger(__name__)
-logging.basicConfig(filename="storm_v2", level=logging.INFO)
+logging.basicConfig(filename="storm_v2.log", level=logging.INFO)
 memory = SqliteSaver.from_conn_string(":memory:")
 
 class AgentState(TypedDict):
@@ -79,7 +79,7 @@ def call_outline_generator(state : AgentState):
                     'run_name': 'outline_gen_without_feedback'
                 }
             ).invoke(inputs)
-        except ValidationError as e:
+        except OutputParserException as e:
             formatter_inputs = {
                 "format_instructions": outline_parser.get_format_instructions(),
                 "agent_output": e,
@@ -102,7 +102,7 @@ def call_outline_generator(state : AgentState):
                     'run_name': 'outline_gen_with_feedback'
                 }
             ).invoke(inputs)
-        except ValidationError as e:
+        except OutputParserException as e:
             formatter_inputs = {
                 "format_instructions": outline_parser.get_format_instructions(),
                 "agent_output": e,
@@ -129,7 +129,7 @@ def call_criticizer(state : AgentState):
                 'run_name': 'criticizer'
             }
         ).invoke(inputs)
-    except ValidationError as e:
+    except OutputParserException as e:
         formatter_inputs = {
             "format_instructions": critique_parser.get_format_instructions(),
             "agent_output": e,
