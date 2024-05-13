@@ -17,7 +17,8 @@ Based on the information given, your task is to critique the given review and th
 You are to provide a detailed analysis of the review and the sections, and provide feedback on the review.\
 You are to be thorough and detailed in your critique, and provide feedback on the review and the sections.\
 
-Be detail centric and outline what information the previous agent might have missed.\
+Be detail centric, descriptive and outline what information the previous agent might have missed.\
+Check if model has missed any information, statistics and numbers.\
 Give information on how it can improve its writing style and the content of the review.\
 
 if the review is perfect, set isperfect field to true, else set it to false.\
@@ -45,9 +46,6 @@ class Critique(BaseModel):
     isperfect: bool = Field(..., title="Whether the review is perfect or not")
     critique: str = Field(..., title="The critique of the review")
     cotreasoning: str = Field(..., title="The reasoning behind the critique")
-    relevantcontent : str = Field(..., title="The relevant content the writer agent needs to refer\
-                                   from to improve the review, pass it from the ground truth")
-
 
 parser = PydanticOutputParser(pydantic_object=Critique)
 

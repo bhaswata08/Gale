@@ -33,7 +33,10 @@ from src.agents.outline_generator.outline_gen import (
     outline_gen_runnable_with_feedback,
     parser as outline_parser
 )
-
+from src.agents.content_extractor.extractor import (
+    extractor_runnable,
+    parser as content_extractor_parser
+)
 
 load_dotenv()
 logger = logging.getLogger(__name__)
@@ -46,6 +49,7 @@ class AgentState(TypedDict):
     initial_content : str
     content : Any
     feedback : Critique
+    extracted_content : str
     iter_count : int
 
 
@@ -98,7 +102,7 @@ def call_outline_generator(state : AgentState):
     else:
         try:
             inputs = {
-                "relevant_content": state['feedback'].relevantcontent,
+                "relevant_content": state['extracted_content'],
                 "agent_outline": state['content'],
                 "feedback" : repr(state['feedback'].critique)
             }
@@ -143,6 +147,7 @@ def call_criticizer(state : AgentState):
             "format_instructions": critique_parser.get_format_instructions(),
             "agent_output": e,
         }
+
         temp_runnable = formatter_runnable | critique_parser
         outputs = temp_runnable.with_config(
             {
@@ -158,6 +163,42 @@ def call_criticizer(state : AgentState):
         "iter_count" : state["iter_count"] + 1
     }
 
+def extract_content(state : AgentState):
+    if state["feedback"].isperfect:
+        return {
+            'extracted_content': ""
+        }
+    else:
+        try:
+            inputs = {
+                "context": state["initial_content"],
+                "critique": state["feedback"].critique
+            }
+            outputs = extractor_runnable.with_config(
+                {
+                    'run_name': 'extractor'
+                }
+            ).invoke(inputs)
+        except (OutputParserException, JSONDecodeError) as e:
+            formatter_inputs = {
+                "format_instructions": content_extractor_parser.get_format_instructions(),
+                "agent_output": e,
+            }
+
+            temp_runnable = formatter_runnable | content_extractor_parser
+            outputs = temp_runnable.with_config(
+                {
+                    "run_name": "extractor passed through formatter",
+                }
+            ).invoke(formatter_inputs)
+        except Exception as e:
+            print(type(Exception))
+            print(type(e))
+
+        return {
+            'extracted_content': '\n'.join(x.relevantcontent for x in outputs.info)
+        }
+
 # Initialize a new graph
 graph = StateGraph(AgentState)
 
@@ -165,6 +206,7 @@ graph = StateGraph(AgentState)
 graph.add_node("initial_summarizer", call_initial_summarizer)
 graph.add_node("outline_gen", call_outline_generator)
 graph.add_node("criticizer", call_criticizer)
+graph.add_node("extract_content", extract_content)
 
 # Set the starting edge
 graph.set_entry_point("initial_summarizer")
@@ -172,8 +214,9 @@ graph.set_entry_point("initial_summarizer")
 # Define the graph logic
 graph.add_edge("initial_summarizer", "outline_gen")
 graph.add_edge("outline_gen", "criticizer")
+graph.add_edge("criticizer", "extract_content")
 graph.add_conditional_edges(
-    "criticizer",
+    "extract_content",
     should_retry,
     {
         "retry": "outline_gen",

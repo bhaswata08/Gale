@@ -20,30 +20,55 @@ with open("config.yaml", "r") as file:
 
 
 SYSTEM_PROMPT = '''
-"You are a Wikipedia writer. Write an outline for a Wikipedia page for the given content. Be comprehensive and specific.",
-Do not hallucinate or add any information that is not in the content.
+You are WikiExpert, an AI assistant highly skilled at writing comprehensive, well-structured, and informative Wikipedia articles on any topic. 
+Your task is to generate a complete Wikipedia article based on the provided outline schema.
+
+The outline will include:
+
+    * The title of the Wikipedia page
+    * A list of sections, each with:
+        * A title and description of the section
+        * The main content of the section with details and information
+        * Optional statistics or numerical data about the section, which can be in the form of markdown tables or descriptions
+        * An optional list of subsections, each with their own title, description and content
+
+Your generated Wikipedia article should meet the following criteria:
+
+    * Accurate and factual information from the given sources/context
+    * Neutral, unbiased tone that presents information objectively
+    * Clear, concise and well-organized writing that is easy to understand
+    * Proper use of headers to clearly delineate sections and subsections
+    * Smooth transitions between sections and subsections
+    * Inclusion of relevant statistics, data, examples, and citations where appropriate
 
 Please output your outline in the following format:
 {format_instructions}
 '''
+
 SYSTEM_PROMPT_WITH_FEEDBACK = '''
-You have tried this task before, incorporate the given feedback to improve your Outline.
+You have tried this task before, incorporate the given feedback to improve your Article.
 '''
 
 class Subsection(BaseModel):
     """A subsection of a Wikipedia page."""
     SubSectionTitle : str = Field(description="Title of the subsection")
-    description : str = Field(description="Detailed Content of the subsection")
+    description : str = Field(description="Detailed description of the subsection")
+    content: str = Field(description="Content of the subsection, details and information about the subsection.")
+    stats: Optional[str] = Field(description="Statistics and numbers about the subsection if any.\
+                                 Can be in the form of markdown tables or just descriptions.")
 
     @property
     def as_string(self)->str:
         """Return the subsection as a string."""
-        return f"#{self.SubSectionTitle} \n{self.description}\n".strip()
+        return f"#{self.SubSectionTitle} \n{self.description}\n {self.content}".strip()
 
 class Section(BaseModel):
     """A section of a Wikipedia page."""
     SectionTitle : str = Field(description="Title of the section")
     description : str = Field(description="A Detialed description of the section")
+    content: str = Field(description="Content of the section, details and information about the section.")
+    stats: Optional[str] = Field(description="Statistics and numbers about the Section if any.\
+                                 Can be in the form of markdown tables or just descriptions.")
     subsections: Optional[List[Subsection]] = Field(
         default = None,
         title = "Titles and descriptions for each subsection of the wikipedia page",
@@ -56,7 +81,7 @@ class Section(BaseModel):
             f"### {subsection.SubSectionTitle}\n\n{subsection.description}"
             for subsection in self.subsections or []
         )
-        return f"## {self.SectionTitle}\n\n{self.description}\n\n{subsections}".strip()
+        return f"## {self.SectionTitle}\n\n{self.description}\n\n{self.content}\n\n{subsections}".strip()
 
 
 class Outline(BaseModel):
